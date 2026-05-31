@@ -32,8 +32,7 @@ linter:
     prefer_const_declarations: true
     prefer_const_literals_to_create_immutables: true
 
-    # Preferir constructores con nombre para mayor claridad.
-    prefer_named_parameters: false  # No forzamos, pero lo recomendamos.
+    
 
     # Siempre declarar tipos de retorno en funciones públicas.
     always_declare_return_types: true

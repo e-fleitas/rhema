@@ -1,122 +1,129 @@
-import 'package:flutter/material.dart';
+// lib/main.dart
+//
+// Punto de entrada de la aplicación Rhema.
+//
+// Responsabilidades de este archivo:
+//   1. Inicializar servicios globales antes de que la UI arranque.
+//   2. Configurar la inyección de dependencias (get_it).
+//   3. Montar el widget raíz de la aplicación.
+//
+// Regla: este archivo debe mantenerse delgado. Ninguna lógica de
+// negocio vive aquí. Solo bootstrapping y configuración inicial.
 
-void main() {
-  runApp(const MyApp());
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+// Punto de entrada de Dart. La anotación pragma le dice al compilador
+// AOT que nunca elimine esta función por optimización (tree-shaking).
+@pragma('vm:entry-point')
+void main() async {
+  // WidgetsFlutterBinding.ensureInitialized() debe llamarse antes de
+  // cualquier código que use plugins de Flutter (base de datos, audio,
+  // sistema de archivos). Inicializa el binding entre Dart y el motor
+  // nativo de Flutter.
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Forzar orientación vertical. Una app de lectura/audio no necesita
+  // modo landscape, y bloquearlo evita reconstrucciones innecesarias
+  // de widgets cuando el usuario rota el teléfono accidentalmente.
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // TODO (Hito 2): Inicializar la base de datos drift.
+  // TODO (Hito 3): Registrar servicios en get_it.
+  // TODO (Hito 4): Inicializar audio_service.
+
+  runApp(const RhemaApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// RhemaApp es el widget raíz de la aplicación.
+//
+// En Flutter, todo es un widget. Este es el ancestro de todos los
+// demás. Su única responsabilidad es configurar el MaterialApp:
+// tema, rutas, y el widget inicial que se muestra al usuario.
+//
+// Es un StatelessWidget porque la app en sí no tiene estado propio.
+// El estado vive en los Cubits/BLoCs de cada feature.
+class RhemaApp extends StatelessWidget {
+  const RhemaApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      // Nombre que aparece en el task switcher de Android.
+      title: 'Rhema',
+
+      // Oculta el banner rojo de "DEBUG" en la esquina superior derecha.
+      debugShowCheckedModeBanner: false,
+
+      // TODO (Hito 5): Reemplazar con el tema completo de Rhema.
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A3C5E), // Azul oscuro — color primario provisional
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A3C5E),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+
+      // Respetar la preferencia del sistema (claro/oscuro).
+      themeMode: ThemeMode.system,
+
+      // Pantalla inicial provisional. La reemplazaremos con el
+      // router de navegación completo en el Hito 5.
+      home: const _SplashPlaceholder(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+// Pantalla provisional de arranque.
+//
+// Existe únicamente para que la app compile y corra ahora mismo.
+// Será eliminada y reemplazada por el sistema de navegación real
+// cuando construyamos las features.
+class _SplashPlaceholder extends StatelessWidget {
+  const _SplashPlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('You have pushed the button this many times:'),
+            Icon(
+              Icons.menu_book_rounded,
+              size: 72,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 24),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Rhema',
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Local-first Bible',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
     );
-  }
 }
+  }
