@@ -43,3 +43,48 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ─── RHEMA — EXCLUSIONES ESPECÍFICAS DEL PROYECTO ────────────────────────────
+
+# Modelos de voz Piper (.onnx + archivos de configuración .json)
+# Son archivos de 50-150 MB. Cada usuario los descarga por separado.
+# Ver: scripts/download_models.sh (pendiente de crear)
+assets/models/
+*.onnx
+*.onnx.json
+
+# Bases de datos SQLite generadas durante desarrollo y pruebas.
+# Nunca versionar datos de usuario, ni siquiera de prueba.
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Código autogenerado por drift + build_runner.
+# Se regenera con: flutter pub run build_runner build
+# No se versiona porque puede reconstruirse desde el esquema fuente.
+*.g.dart
+*.drift.dart
+
+# Archivos de Bibles importados por el usuario durante pruebas locales.
+# (el desarrollador puede importar Biblias .json para probar,
+# pero esos archivos no pertenecen al repositorio)
+assets/bibles/*.json
+assets/bibles/*.sqlite
+
+# Mantener los placeholders que sí queremos en Git
+!assets/bibles/.gitkeep
+!assets/fonts/.gitkeep
+
+# ─── ENTORNO LOCAL ────────────────────────────────────────────────────────────
+
+# Variables de entorno locales (si en el futuro usamos flutter_dotenv)
+.env
+.env.local
+.env.*.local
+
+# Configuración personal de VSCode (sí versionar la carpeta .vscode/
+# con configuraciones del proyecto, pero no las preferencias personales)
+.vscode/settings.json
+.vscode/launch.json
