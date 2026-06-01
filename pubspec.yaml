@@ -35,7 +35,7 @@ dependencies:
   # === Base de datos local ===
   # drift: ORM type-safe sobre SQLite. Genera código Dart desde esquemas.
   # Equivalente a Room en Android nativo.
-  drift: ^2.26.1
+  drift: ^2.18.0
   sqlite3_flutter_libs: ^0.5.29  # Binarios de SQLite para Android/Linux
   path_provider: ^2.1.5          # Rutas del sistema de archivos (Documents, Cache, etc.)
   path: ^1.9.1                   # Utilidades para manipular rutas de archivos
@@ -61,7 +61,7 @@ dev_dependencies:
     sdk: flutter
 
   # drift_dev: generador de código para los esquemas de base de datos.
-  drift_dev: ^2.26.1
+  drift_dev: ^2.18.0
   # build_runner: motor que ejecuta los generadores de código (drift, etc.)
   build_runner: ^2.4.15
   # flutter_lints: reglas de linting oficiales de Flutter.
