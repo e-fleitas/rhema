@@ -1,81 +1,43 @@
-# pubspec.yaml
-#
-# Archivo de manifiesto del proyecto Rhema.
-# Flutter lo lee en cada build para resolver dependencias,
-# registrar assets y configurar la aplicación.
-
 name: rhema
 description: >
   A local-first, privacy-focused Bible app with audio playlists
   and real-time karaoke-style verse highlighting. Powered by
   on-device AI voice synthesis via Piper ONNX.
 
-# El proyecto es una aplicación, no un paquete publicable.
 publish_to: none
 
-# Versión semántica: MAJOR.MINOR.PATCH+BUILD_NUMBER
-# El número después del + es el versionCode de Android.
 version: 0.1.0+1
 
 environment:
-  # Dart SDK incluido en Flutter 3.44.0
   sdk: ^3.12.0
 
-# ─── DEPENDENCIAS DE PRODUCCIÓN ───────────────────────────────────────────────
 dependencies:
   flutter:
     sdk: flutter
 
-  # === Gestión de estado ===
-  # flutter_bloc: implementación de BLoC/Cubit para separar UI de lógica.
-  # Cubit es la versión simplificada de BLoC; la usaremos para features simples.
   flutter_bloc: ^9.1.1
-  equatable: ^2.0.7          # Comparación de objetos por valor, requerido por BLoC
+  equatable: ^2.0.7
 
-  # === Base de datos local ===
-  # drift: ORM type-safe sobre SQLite. Genera código Dart desde esquemas.
-  # Equivalente a Room en Android nativo.
-  drift: ^2.18.0
-  sqlite3_flutter_libs: ^0.5.29  # Binarios de SQLite para Android/Linux
-  path_provider: ^2.1.5          # Rutas del sistema de archivos (Documents, Cache, etc.)
-  path: ^1.9.1                   # Utilidades para manipular rutas de archivos
+  sqflite: ^2.3.3+1
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
-  # === Audio ===
-  # just_audio: reproducción de audio con soporte para background playback.
   just_audio: ^0.10.3
-  # audio_service: integración con MediaSession de Android
-  # (controles en pantalla de bloqueo, notificación de reproducción).
   audio_service: ^0.18.17
 
-  # === Utilidades ===
-  # get_it: inyección de dependencias simple. Registras servicios una vez
-  # y los obtienes en cualquier parte sin pasar constructores por toda la UI.
   get_it: ^8.0.3
-  # rxdart: extensiones reactivas para Streams de Dart.
-  # Lo usaremos para el motor de sincronización karaoke.
   rxdart: ^0.28.0
 
-# ─── DEPENDENCIAS DE DESARROLLO ───────────────────────────────────────────────
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # drift_dev: generador de código para los esquemas de base de datos.
-  drift_dev: ^2.18.0
-  # build_runner: motor que ejecuta los generadores de código (drift, etc.)
   build_runner: ^2.4.15
-  # flutter_lints: reglas de linting oficiales de Flutter.
   flutter_lints: ^5.0.0
 
-# ─── ASSETS ───────────────────────────────────────────────────────────────────
 flutter:
   uses-material-design: true
 
   assets:
-    # Biblias de muestra incluidas en el APK (licencia de dominio público)
     - assets/bibles/
-    # Fuentes tipográficas
     - assets/fonts/
-    # NOTA: assets/models/ (modelos Piper .onnx) NO se incluyen aquí.
-    # Son demasiado grandes para el APK. El usuario los descarga/importa
-    # manualmente al almacenamiento del dispositivo.
