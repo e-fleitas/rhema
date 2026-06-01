@@ -18,7 +18,10 @@ import 'package:sqflite/sqflite.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/bible_dao.dart';
 import '../../data/database/playlist_dao.dart';
+import '../../data/importers/json_bible_importer.dart';
 import '../../data/repositories/bible_repository.dart';
+import '../../data/services/bible_import_service.dart';
+
 // sl es la instancia global del service locator.
 // El nombre corto facilita su uso en todo el proyecto.
 final GetIt sl = GetIt.instance;
@@ -56,5 +59,32 @@ Future<void> setupServiceLocator() async {
   );
 
   // TODO (Hito 5): registrar PlaylistRepository
-  // TODO (Hito 4): registrar BibleImportService
+
+  // ── Capa 4: Importador e infraestructura de importación ───────────────
+  //
+  // JsonBibleImporter: lógica pura de parseo y escritura en la DB.
+  // No tiene estado propio: se puede registrar como LazySingleton.
+  //
+  // registerLazySingleton: la instancia se crea la primera vez que
+  // alguien la pide (no al arrancar la app). Útil para objetos pesados
+  // que quizás nunca se necesiten en una sesión normal (el usuario
+  // que ya importó su Biblia nunca activa el importador).
+  sl.registerLazySingleton<JsonBibleImporter>(
+    () => JsonBibleImporter(sl<BibleRepository>()),
+  );
+
+  // BibleImportService: facade de alto nivel sobre JsonBibleImporter.
+  // Es lo que los Cubits consumen; encapsula la lógica de "¿ya importé?".
+  //
+  // También LazySingleton: solo se instancia si la UI del onboarding
+  // o algún Cubit lo solicita. En sesiones normales (Biblia ya importada)
+  // el servicio se crea pero getStatus() retorna completed sin DB hit
+  // después de la primera consulta gracias al caché en memoria.
+  sl.registerLazySingleton<BibleImportService>(
+    () => BibleImportService(
+      repository: sl<BibleRepository>(),
+      importer: sl<JsonBibleImporter>(),
+    ),
+  );
 }
+
