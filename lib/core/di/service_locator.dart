@@ -21,6 +21,7 @@ import '../../data/database/playlist_dao.dart';
 import '../../data/importers/json_bible_importer.dart';
 import '../../data/repositories/bible_repository.dart';
 import '../../data/services/bible_import_service.dart';
+import '../../features/bible_reader/cubit/bible_cubit.dart';
 
 // sl es la instancia global del service locator.
 // El nombre corto facilita su uso en todo el proyecto.
@@ -45,18 +46,12 @@ Future<void> setupServiceLocator() async {
   //
   // Los DAOs reciben la Database. Como Database ya está registrada,
   // podemos pedirla con sl<Database>().
-  sl.registerSingleton<BibleDao>(
-    BibleDao(sl<Database>()),
-  );
+  sl.registerSingleton<BibleDao>(BibleDao(sl<Database>()));
 
-  sl.registerSingleton<PlaylistDao>(
-    PlaylistDao(sl<Database>()),
-  );
+  sl.registerSingleton<PlaylistDao>(PlaylistDao(sl<Database>()));
 
   // ── Capa 3: Repositorios ───────────────────────────────────────────────
-  sl.registerSingleton<BibleRepository>(
-    BibleRepository(sl<BibleDao>()),
-  );
+  sl.registerSingleton<BibleRepository>(BibleRepository(sl<BibleDao>()));
 
   // TODO (Hito 5): registrar PlaylistRepository
 
@@ -86,5 +81,5 @@ Future<void> setupServiceLocator() async {
       importer: sl<JsonBibleImporter>(),
     ),
   );
+  sl.registerLazySingleton<BibleCubit>(() => BibleCubit(sl<BibleRepository>()));
 }
-

@@ -166,8 +166,11 @@ class _BookCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () {
-          context.read<BibleCubit>().loadChapters(book);
-          Navigator.of(context).pushNamed('/chapters', arguments: book);
+          final cubit = context.read<BibleCubit>();
+          cubit.loadChapters(book);
+          Navigator.of(
+            context,
+          ).pushNamed('/chapters', arguments: {'cubit': cubit, 'book': book});
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

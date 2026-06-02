@@ -29,7 +29,9 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
     // Usamos addPostFrameCallback para esperar a que el widget
     // esté montado antes de leer los argumentos de la ruta.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final book = ModalRoute.of(context)?.settings.arguments as Book?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final book = args?['book'] as Book?;
       if (book != null) {
         context.read<BibleCubit>().loadChapters(book);
       }
@@ -90,13 +92,11 @@ class _ChaptersGrid extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(8),
             onTap: () {
-              context.read<BibleCubit>().loadVerses(
-                book: book,
-                chapter: chapter,
-              );
+              final cubit = context.read<BibleCubit>();
+              cubit.loadVerses(book: book, chapter: chapter);
               Navigator.of(context).pushNamed(
                 '/verses',
-                arguments: {'book': book, 'chapter': chapter},
+                arguments: {'cubit': cubit, 'book': book, 'chapter': chapter},
               );
             },
             child: Center(
