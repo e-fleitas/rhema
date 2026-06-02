@@ -1,16 +1,18 @@
 // lib/main.dart
 //
-// Punto de entrada de la aplicación Rhema.
-// Actualizado en Hito 3 para inicializar la base de datos
-// y el service locator antes de arrancar la UI.
+// Punto de entrada de Rhema.
+// Hito 5: conecta el router de navegación y detecta
+// automáticamente si la Biblia ya fue importada.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'core/di/service_locator.dart';
-import 'data/repositories/bible_repository.dart';
+import 'app/router.dart';
 import 'core/di/service_locator.dart';
 import 'data/services/bible_import_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'data/repositories/bible_repository.dart';
+import 'features/bible_reader/cubit/bible_cubit.dart';
 
 @pragma('vm:entry-point')
 void main() async {
@@ -21,9 +23,6 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Inicializa la base de datos SQLite y registra todos los
-  // servicios en get_it antes de que la UI arranque.
-  // Si algo falla aquí, lo veremos en los logs antes del splash.
   await setupServiceLocator();
 
   runApp(const RhemaApp());
@@ -52,76 +51,187 @@ class RhemaApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system,
-      home: const _SplashPlaceholder(),
+      onGenerateRoute: AppRouter.onGenerateRoute,
+      home: const _AppEntry(),
     );
   }
 }
 
-class _SplashPlaceholder extends StatefulWidget {
-  const _SplashPlaceholder();
+// _AppEntry verifica el estado de la DB al arrancar.
+// Si la Biblia ya está importada → va directo a BooksScreen.
+// Si no → muestra el flujo de onboarding con importación.
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
 
   @override
-  State<_SplashPlaceholder> createState() => _SplashPlaceholderState();
+  State<_AppEntry> createState() => _AppEntryState();
 }
 
-class _SplashPlaceholderState extends State<_SplashPlaceholder> {
-  ImportProgress? _progress;
-  bool _started = false;
+class _AppEntryState extends State<_AppEntry> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAndNavigate();
+  }
 
-  void _startImport() async {
-    setState(() => _started = true);
+  Future<void> _checkAndNavigate() async {
+    final status = await sl<BibleImportService>().getStatus();
+
+    if (!mounted) return;
+
+    if (status == ImportStatus.completed) {
+      // Biblia ya importada: ir directo a la lista de libros.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const _BooksScreenWrapper()),
+      );
+    } else {
+      // Primera vez: mostrar pantalla de onboarding.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const _OnboardingScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Pantalla de splash mientras verificamos el estado.
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.menu_book_rounded,
+              size: 72,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Rhema',
+              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// El Cubit vive aquí, en el ancestro común de todas las
+// pantallas de lectura. Las rutas hijas lo leen con
+// context.read<BibleCubit>() sin necesidad de crearlo de nuevo.
+class _BooksScreenWrapper extends StatelessWidget {
+  const _BooksScreenWrapper();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => BibleCubit(sl<BibleRepository>()),
+      // ignore: prefer_const_constructors
+      child: Navigator(
+        onGenerateRoute: AppRouter.onGenerateRoute,
+        initialRoute: AppRouter.books,
+      ),
+    );
+  }
+}
+
+// Pantalla de onboarding para primera instalación.
+// Importa automáticamente la RV1909 y la KJV al abrir la app.
+class _OnboardingScreen extends StatefulWidget {
+  const _OnboardingScreen();
+
+  @override
+  State<_OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<_OnboardingScreen> {
+  ImportProgress? _progress;
+
+  @override
+  void initState() {
+    super.initState();
+    _startImport();
+  }
+
+  void _startImport() {
+    // Importamos la RV1909 primero, luego la KJV.
+    sl<BibleImportService>()
+        .importFromAssets(assetPath: 'bibles/es_rv1909.json', language: 'es')
+        .listen((p) => setState(() => _progress = p), onDone: _importKjv);
+  }
+
+  void _importKjv() {
     sl<BibleImportService>()
         .importFromAssets(
-          assetPath: 'bibles/es_rv1909.json',
-          language: 'es',
+          assetPath: 'bibles/en_kjv.json',
+          language: 'en',
           force: true,
         )
-        .listen(
-          (p) => setState(() => _progress = p),
-          onDone: () async {
-            final books = await sl<BibleRepository>().getAllBooks();
-            debugPrint('=== LIBROS EN DB: ${books.length} ===');
-            debugPrint(
-              'Primero: ${books.first.name} | Último: ${books.last.name}',
-            );
-          },
-        );
+        .listen((p) => setState(() => _progress = p), onDone: _goToBooks);
+  }
+
+  void _goToBooks() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const _BooksScreenWrapper()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final p = _progress;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(40),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.menu_book_rounded, size: 72),
-              const SizedBox(height: 24),
-              if (!_started) ...[
-                ElevatedButton(
-                  onPressed: _startImport,
-                  child: const Text('Importar Biblia'),
+              Icon(
+                Icons.menu_book_rounded,
+                size: 64,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'Preparando tu Biblia',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-              ] else if (p == null) ...[
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Solo la primera vez',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 40),
+              if (p == null) ...[
                 const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text('Iniciando...'),
               ] else if (p.hasError) ...[
-                Text(
-                  'Error: ${p.error}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ] else if (p.isComplete) ...[
-                const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                Icon(Icons.error_outline, size: 48, color: colorScheme.error),
                 const SizedBox(height: 16),
-                const Text('¡Importación completa!'),
+                Text(
+                  p.error ?? 'Error desconocido',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: colorScheme.error),
+                ),
               ] else ...[
                 LinearProgressIndicator(value: p.percentage),
                 const SizedBox(height: 16),
-                Text('${p.bookName} (${p.currentBook}/${p.totalBooks})'),
+                Text(
+                  p.isComplete ? 'Completado' : p.bookName,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ],
             ],
           ),
