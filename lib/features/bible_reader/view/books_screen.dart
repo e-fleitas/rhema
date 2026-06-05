@@ -24,9 +24,21 @@ class _BooksScreenState extends State<BooksScreen> {
   @override
   void initState() {
     super.initState();
-    // Disparamos la carga de libros al montar la pantalla.
-    // initState no es async, por eso llamamos sin await.
     context.read<BibleCubit>().loadBooks();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cuando volvemos desde ChaptersScreen el estado es ChaptersLoaded.
+    // Recargamos los libros para mostrar la grilla correctamente.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<BibleCubit>().state;
+      if (state is! BooksLoaded) {
+        context.read<BibleCubit>().loadBooks();
+      }
+    });
   }
 
   @override
@@ -70,9 +82,18 @@ class _BooksScreenState extends State<BooksScreen> {
                 ],
               ),
             ),
-            // Los estados ChaptersLoaded y VersesLoaded no aplican
-            // a esta pantalla. Los ignoramos con un widget vacío.
-            _ => const SizedBox.shrink(),
+            _ => Builder(
+              builder: (context) {
+                // Estado incorrecto al volver desde pantallas hijas.
+                // Recargamos inmediatamente.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    context.read<BibleCubit>().loadBooks();
+                  }
+                });
+                return const Center(child: CircularProgressIndicator());
+              },
+            ),
           };
         },
       ),

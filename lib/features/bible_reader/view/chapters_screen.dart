@@ -21,18 +21,33 @@ class ChaptersScreen extends StatefulWidget {
 }
 
 class _ChaptersScreenState extends State<ChaptersScreen> {
+  Book? _book;
+
   @override
   void initState() {
     super.initState();
-    // El libro llega como argumento de navegación.
-    // ModalRoute.of() lo extrae de los argumentos de la ruta.
-    // Usamos addPostFrameCallback para esperar a que el widget
-    // esté montado antes de leer los argumentos de la ruta.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      _book = args?['book'] as Book?;
+      if (_book != null) {
+        context.read<BibleCubit>().loadChapters(_book!);
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cuando volvemos desde VersesScreen el estado es VersesLoaded.
+    // Necesitamos recargar los capítulos para mostrar la grilla.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<BibleCubit>().state;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final book = args?['book'] as Book?;
-      if (book != null) {
+      if (book != null && state is! ChaptersLoaded) {
         context.read<BibleCubit>().loadChapters(book);
       }
     });
@@ -43,7 +58,6 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
     return BlocBuilder<BibleCubit, BibleState>(
       builder: (context, state) {
         final book = state is ChaptersLoaded ? state.book : null;
-
         return Scaffold(
           appBar: AppBar(
             title: Text(book?.name ?? ''),
@@ -58,7 +72,20 @@ class _ChaptersScreenState extends State<ChaptersScreen> {
               chapterCount: chapterCount,
             ),
             BibleError(:final message) => Center(child: Text(message)),
-            _ => const SizedBox.shrink(),
+            _ => Builder(
+              builder: (context) {
+                final args =
+                    ModalRoute.of(context)?.settings.arguments
+                        as Map<String, dynamic>?;
+                final book = args?['book'] as Book?;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted && book != null) {
+                    context.read<BibleCubit>().loadChapters(book);
+                  }
+                });
+                return const Center(child: CircularProgressIndicator());
+              },
+            ),
           },
         );
       },
